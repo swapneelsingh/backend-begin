@@ -3,9 +3,20 @@ import { config } from 'dotenv';
 import connectDB from './db/index.js'
 
 dotenv.config({path: './env'})
-connectDB();
+
+connectDB()
+.then(() => {
+    app.listen(process.env.POST || 8000, () => {
+        console.log(`server is running on port : ${process.env.PORT}`); 
+    })
+})
+.catch((error) => {
+    console.log("MONGODB connection failed !!! : ", error)
+})
 
 /*
+
+-- it is one of the method we can connect to mongoDB --
 import express from 'express'
 const app = express();
 (async() => {
