@@ -1,9 +1,8 @@
 const asyncHandler = (requestHandler) => {
-    (req, res, next) => {
-        Promise.resolve(requestHandler(req, res, next))
-        .catch((err) => next(err));
-    }
-}
+  return (req, res, next) => {
+    Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err));
+  };
+};
 
 /*
 --this is the other way of wrapping--
@@ -20,4 +19,4 @@ const asyncHandler = (fn) => async(req, res, next) => {
 }
 */
 
-export {asyncHandler}
+export { asyncHandler };
