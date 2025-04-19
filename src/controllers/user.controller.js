@@ -9,7 +9,7 @@ const registerUser = asyncHandler(async(req, res) => {
     //Lecture - 12 content
     /*res.status(200).json({
         message: "ok"
-    })*/
+    })*/ 
 
     //Lecture - 13
     //1. get user details from the frontend based on the user.model we built earlier
@@ -34,7 +34,7 @@ const registerUser = asyncHandler(async(req, res) => {
     }
 
     //3
-    const existedUser = User.findOne ({
+    const existedUser = await User.findOne ({
         $or: [{username}, {email}]
     })
 
@@ -81,7 +81,7 @@ const registerUser = asyncHandler(async(req, res) => {
 
     //10
     return res.status(201).json (
-        new ApiResponse(200, createdUser, "User Registered Successfully")
+        new ApiResponse(200, isUserCreated, "User Registered Successfully")
     )
 })
 
