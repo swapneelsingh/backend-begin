@@ -3,8 +3,23 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/user.model.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
-import { config } from "dotenv";
 
+const registerAccessAndRefreshTokens = async(usedId) => {
+    try {
+        const user = await User.findById(userId);
+        const accessToken = await user.generateAccessToken();
+        const refreshToken = await user.generateRefreshToken();
+
+        //saving refresh token into DB
+        user.refreshToken = refreshToken;
+        await user.save({validateBeforeSave: false})
+
+        return ({accessToken, refreshToken})
+    }
+    catch(error) {
+        throw new ApiError( 500, "Something went wrong while making access and refresh token")
+    }
+}
 const registerUser = asyncHandler(async(req, res) => {
     //Lecture - 12 content
     /*res.status(200).json({
@@ -85,4 +100,89 @@ const registerUser = asyncHandler(async(req, res) => {
     )
 })
 
-export {registerUser};
+const loginUser = asyncHandler(async(req, res) =>   {
+    // req body —> data
+    // username or email
+    // find the user
+    // password check
+    // MOST-IMPORTANT ===> access and refresh token (form a separate method for this)
+    // send cookie
+
+    const {email, username, password} = req.body;
+    
+    // i have issue , i think instead of || we should use && in lec-15 
+    if(!email && !username)
+    {
+        throw new ApiError(400, "Username or email is required")
+    }
+
+    const user = await User.findOne({ 
+        $or: [{username, email}]
+    })
+
+    if(!user) {
+        throw new ApiError(404, "User do not exist")
+    }
+
+    const isPasswordValid = await user.isPasswordCorrect(password);
+
+    if(!isPasswordValid) {
+        throw new ApiError(401, "Invalid Password")
+    }
+
+    //call to form access and refresh token
+    const {accessToken, refreshToken} = await registerAccessAndRefreshTokens(user._id); 
+
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken");
+
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .cookie("accessToken", accessToken, options)
+    .cookie("refreshToken", refreshToken, options)
+    .json(
+        new ApiError (
+            200, {
+                user: loggedInUser, accessToken, refreshToken
+            },
+            "User logged in Successfully"
+        )
+    )
+
+})
+
+//logout user by making a middleware
+const logoutUser = await asyncHandler(async(req, res) => {
+    await User.findByIdAndUpdate(
+        req.user._id,
+        {
+            $set: {
+                refreshToken: undefined
+            }
+        },
+        {
+            new: true
+        }
+    )
+    const options = {
+        httpOnly: true,
+        secure: true
+    }
+
+    return res
+    .status(200)
+    .clearCookie("accessToken", options)
+    .clearCookie("refreshToken", options)
+    .json(new ApiResponse(200, {}, "User logged out Successfully"))
+
+})
+
+export {
+    registerUser,
+    loginUser,
+    logoutUser
+};
